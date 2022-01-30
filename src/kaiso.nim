@@ -1,19 +1,7 @@
-import std/[asyncnet, asyncdispatch, os, nativesockets]
+import std/[asyncnet, asyncdispatch, os, nativesockets, strutils]
 import utils
 import SocketWithInfo
-
-proc transferTo(source: SocketWithInfo, target: SocketWithInfo) {.async.} =
-  while true:
-    try:
-      let buf = await source.socket.recv 4096
-      if buf.len == 0:
-        discard source.closeRead
-        discard target.closeWrite
-        break
-      await target.socket.send buf
-    except:
-      echo getCurrentExceptionMsg()
-      break
+import AsyncTcpServer
 
 proc handle(client: SocketWithInfo) {.async.} =
   var service = SocketWithInfo()
@@ -29,12 +17,21 @@ proc handle(client: SocketWithInfo) {.async.} =
 
     # client has requested the service list
     if line == "\r\n":
-      for entry in walkDirRec(dir = "services", relative = true):
-        await client.socket.sendLine entry
+      for entry in walkDirRec(dir = serviceDir, relative = true, yieldFilter = {pcFile, pcLinkToFile}, followFilter = {pcDir, pcLinkToDir}):
+        if not entry.lastPathPart.isHidden:
+          await client.socket.sendLine entry
+    # client tries to connect
     else:
       try:
+        # LFI guard
+        let file = serviceDir / line
+        assert file.isRelativeTo serviceDir,
+          "Requested file $1 = $2 not relative to service directory $3" % [line, file, serviceDir]
+
         service.socket = newAsyncUnixSocket(buffered = false)
-        await service.socket.connectUnix "services" / line # this can raise OSError
+        await service.socket.connectUnix serviceDir / line
+
+        # start bidirectional data transfer
         asyncCheck client.transferTo service
         asyncCheck service.transferTo client
       except:
@@ -43,17 +40,4 @@ proc handle(client: SocketWithInfo) {.async.} =
         service.close
         return
 
-  
-proc serve() {.async.} =
-  var server = newAsyncSocket(buffered = false)
-  server.setSockOpt OptReuseAddr, true
-  server.bindAddr 37812.Port
-  server.listen
-
-  while true:
-    let clientSocket = await server.accept
-    let client = SocketWithInfo(socket: clientSocket)
-    asyncCheck client.handle
-
-asyncCheck serve()
-runForever()
+asyncTcpServer "0.0.0.0", 37812.Port, handle

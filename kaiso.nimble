@@ -5,7 +5,7 @@ author        = "Leon Schumacher"
 description   = "Hierarchical network services"
 license       = "AGPL-3.0-or-later"
 srcDir        = "src"
-bin           = @["kaiso"]
+bin           = @["kaiso", "expose"]
 
 # Dependencies
 
