@@ -41,11 +41,9 @@ proc transferTo*(source: SocketWithInfo, target: SocketWithInfo) {.async.} =
     while true:
       let buf = await source.socket.recv 4096
       assert buf.len > 0, "No more data from this socket"
-      echo "sending ", buf
       await target.socket.safeSend buf
   except:
     echo getCurrentExceptionMsg()
-    echo cast[int](source.socket.getFd), " ", cast[int](target.socket.getFd)
     discard source.closeRead
     discard target.closeWrite
     return
