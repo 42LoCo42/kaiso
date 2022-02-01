@@ -39,11 +39,11 @@ proc handle(client: SocketWithInfo) {.async.} =
           of S_IFSOCK: # unix socket
             service.socket = newAsyncUnixSocket(buffered = false)
             await service.socket.connectUnix serviceDir / line
-          of S_IFREG: # regular file, should contains IP:port
+          of S_IFREG: # regular file
             file = filename.open
-            let (svcAddr, svcPort, svcPath) = file.readLine.parseAddr
+            let (svcAddr, svcPort, svcPath) = file.readLine.parseAddr # syntax: address:port[:service path]
             service.socket = await dial(svcAddr, svcPort, buffered = false)
-            if svcPath.len > 0:
+            if svcPath.len > 0: # inject service path if specified, for connection to kaiso
               await service.socket.sendLine svcPath
           else:
             raise newException(Exception, "Unsupported file type!")
