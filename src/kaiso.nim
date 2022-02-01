@@ -1,12 +1,16 @@
-import std/[asyncnet, asyncdispatch, os, nativesockets, strutils]
+import std/[asyncnet, asyncdispatch, bitops, os, nativesockets, strutils, posix, posix_utils]
 import utils
 import SocketWithInfo
 import AsyncTcpServer
 
-proc handle(client: SocketWithInfo) {.async.} =
-  var service = SocketWithInfo()
+let args = commandLineParams()
+if args.len != 1:
+  quit "Usage: $1 <address:port>" % [getAppFilename().lastPathPart]
 
-  while service.socket == nil:
+let (listenIP, listenPort, _) = args[0].parseAddr
+
+proc handle(client: SocketWithInfo) {.async.} =
+  while true:
     # while client is not connected: display services on request
     let line = await client.socket.recvLine
 
@@ -22,22 +26,38 @@ proc handle(client: SocketWithInfo) {.async.} =
           await client.socket.sendLine entry
     # client tries to connect
     else:
+      var service = SocketWithInfo()
+      var file: File = nil
       try:
         # LFI guard
-        let file = serviceDir / line
-        assert file.isRelativeTo serviceDir,
-          "Requested file $1 = $2 not relative to service directory $3" % [line, file, serviceDir]
+        let filename = serviceDir / line
+        assert filename.isRelativeTo serviceDir,
+          "Requested file $1 = $2 not relative to service directory $3" % [line, filename, serviceDir]
 
-        service.socket = newAsyncUnixSocket(buffered = false)
-        await service.socket.connectUnix serviceDir / line
+        # backends
+        case cast[cint](filename.stat.st_mode).bitand S_IFMT:
+          of S_IFSOCK: # unix socket
+            service.socket = newAsyncUnixSocket(buffered = false)
+            await service.socket.connectUnix serviceDir / line
+          of S_IFREG: # regular file, should contains IP:port
+            file = filename.open
+            let (svcAddr, svcPort, svcPath) = file.readLine.parseAddr
+            service.socket = await dial(svcAddr, svcPort, buffered = false)
+            if svcPath.len > 0:
+              await service.socket.sendLine svcPath
+          else:
+            raise newException(Exception, "Unsupported file type!")
 
         # start bidirectional data transfer
         asyncCheck client.transferTo service
         asyncCheck service.transferTo client
+        return
       except:
-        echo getCurrentExceptionMsg()
+        echo "Could not establish a service connection: ", getCurrentExceptionMsg()
         client.close
         service.close
         return
+      finally:
+        file.close
 
-asyncTcpServer "0.0.0.0", 37812.Port, handle
+asyncTcpServer listenIP, listenPort, handle

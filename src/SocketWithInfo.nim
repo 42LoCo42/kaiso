@@ -43,7 +43,7 @@ proc transferTo*(source: SocketWithInfo, target: SocketWithInfo) {.async.} =
       assert buf.len > 0, "No more data from this socket"
       await target.socket.safeSend buf
   except:
-    echo getCurrentExceptionMsg()
+    echo "Transfer stopped: ", getCurrentExceptionMsg()
     discard source.closeRead
     discard target.closeWrite
     return

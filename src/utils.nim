@@ -24,7 +24,10 @@ proc sendLine*(client: AsyncSocket, line: string, flags = {SafeDisconn}) {.async
   ## Send line followed by CRLF
   await client.safeSend(line & "\r\n", flags)
 
-func parseAddr*(s: string): (string, Port) =
+func parseAddr*(s: string): (string, Port, string) =
   ## Split address string on : to IP and port
   let fields = s.split(':')
-  (fields[0], fields[1].parseUInt.Port)
+  case fields.len:
+    of 2: (fields[0], fields[1].parseUInt.Port, "")
+    of 3: (fields[0], fields[1].parseUInt.Port, fields[2])
+    else: raise newException(ValueError, "Invalid address syntax in " & s)
