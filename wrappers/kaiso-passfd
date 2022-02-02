@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+name="$(basename "${BASH_SOURCE[0]}")"
+(($# < 1)) && cat << EOF && exit 1
+Usage: $name <program> [args...]
+Replace the accept(2) system call to receive a file descriptor from Kaiso.
+This increases data transfer performance greatly,
+since Kaiso does not have to copy the data anymore.
+EOF
+
+export LD_PRELOAD="$name.so"
+exec "$@"

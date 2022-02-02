@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-export KAISO_IP=localhost
-export KAISO_PORT=37812
-export KAISO_SERVICE="$1"
-export LD_PRELOAD="./kaiso-wrap.so"
-shift
-exec "$@"

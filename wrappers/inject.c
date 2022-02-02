@@ -1,11 +1,11 @@
 #define _GNU_SOURCE
 
 #include <dlfcn.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <netdb.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 static int (*original_connect)(int sockfd, const struct sockaddr* addr, socklen_t addrlen) = NULL;
 static struct addrinfo* targets = NULL;

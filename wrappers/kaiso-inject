@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+name="$(basename "${BASH_SOURCE[0]}")"
+(($# < 3)) && cat << EOF && exit 1
+Usage: $name <kaiso IP:kaiso port> <service path> <program> [args...]
+Inject a Kaiso service path into the connect(2) system call
+whenever a connection to Kaiso is opened.
+Currently only designed for TCP connections!
+EOF
+
+IFS=: read -r KAISO_IP KAISO_PORT <<< "$1"
+export KAISO_IP
+export KAISO_PORT
+export KAISO_SERVICE="$2"
+export LD_PRELOAD="$name.so"
+shift 2
+exec "$@"
