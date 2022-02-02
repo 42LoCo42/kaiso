@@ -7,7 +7,7 @@ let args = commandLineParams()
 if args.len != 1:
   quit "Usage: $1 <address:port>" % [getAppFilename().lastPathPart]
 
-let (listenIP, listenPort, _) = args[0].parseAddr
+let (listenIP, listenPort) = args[0].parseAddr
 
 proc handle(client: SocketWithInfo) {.async.} =
   while true:
@@ -29,6 +29,9 @@ proc handle(client: SocketWithInfo) {.async.} =
       var service = SocketWithInfo()
       var file: File = nil
       try:
+        # Don't allow connections to invisible services
+        assert not line.startsWith '.', "Requested file $1 is hidden!" % [line]
+
         # LFI guard
         let filename = serviceDir / line
         assert filename.isRelativeTo serviceDir,
@@ -38,13 +41,28 @@ proc handle(client: SocketWithInfo) {.async.} =
         case cast[cint](filename.stat.st_mode).bitand S_IFMT:
           of S_IFSOCK: # unix socket
             service.socket = newAsyncUnixSocket(buffered = false)
-            await service.socket.connectUnix serviceDir / line
-          of S_IFREG: # regular file
+            await service.socket.connectUnix filename
+          of S_IFREG: # regular file = service description
             file = filename.open
-            let (svcAddr, svcPort, svcPath) = file.readLine.parseAddr # syntax: address:port[:service path]
-            service.socket = await dial(svcAddr, svcPort, buffered = false)
-            if svcPath.len > 0: # inject service path if specified, for connection to kaiso
-              await service.socket.sendLine svcPath
+            let (svcAddr, svcPort, svcOption) = file.readLine.parseService
+
+            if svcPort == 0.Port:
+              # connect to unix socket
+              service.socket = newAsyncUnixSocket(buffered = false)
+              await service.socket.connectUnix serviceDir / svcAddr
+
+              if svcOption == "passfd":
+                service.socket.passSocket client.socket
+                client.close
+                service.close
+                return
+            else:
+              # connect to TCP
+              service.socket = await dial(svcAddr, svcPort, buffered = false)
+
+              if svcOption.len > 0:
+                # inject service path
+                await service.socket.sendLine svcOption
           else:
             raise newException(Exception, "Unsupported file type!")
 

@@ -7,9 +7,9 @@ let args = commandLineParams()
 if args.len != 3:
   quit "Usage: $1 <kaiso address:port> <service to expose> <address:port>" % [getAppFilename().lastPathPart]
 
-let (kaisoIP, kaisoPort, _) = args[0].parseAddr
+let (kaisoIP, kaisoPort) = args[0].parseAddr
 let servicePath = args[1]
-let (exposeIP, exposePort, _) = args[2].parseAddr
+let (exposeIP, exposePort) = args[2].parseAddr
 
 proc handle(client: SocketWithInfo) {.async.} =
   let service = SocketWithInfo()

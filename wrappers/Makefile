@@ -1,5 +1,5 @@
-CFLAGS := -Wall -Wextra -fPIC -shared -O2
-LDFLAGS := -ldl
+CFLAGS := $(CFLAGS) -Wall -Wextra -fPIC -shared -O2
+LDFLAGS := $(LDFLAGS) -ldl
 
 SRCS := $(wildcard *.c)
 BINS := $(addprefix kaiso-, $(SRCS:.c=))

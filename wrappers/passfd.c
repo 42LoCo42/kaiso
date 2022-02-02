@@ -6,6 +6,12 @@
 
 static int (*original_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 
+static void __attribute__((constructor)) libInit();
+
+static void libInit() {
+	original_accept = dlsym(RTLD_NEXT, "accept");
+}
+
 static int recv_fd(int socket) {
 	char m_buf[1] = {};
 	char c_buf[CMSG_SPACE(sizeof(int))] = {};
@@ -24,10 +30,6 @@ static int recv_fd(int socket) {
 }
 
 int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
-	if(original_accept == NULL) {
-		original_accept = dlsym(RTLD_NEXT, "accept");
-	}
-
 	int client = (*original_accept)(sockfd, addr, addrlen);
 	if(client < 0) return client;
 
