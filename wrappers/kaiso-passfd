@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
 name="$(basename "${BASH_SOURCE[0]}")"
-(($# < 1)) && cat << EOF && exit 1
-Usage: $name <program> [args...]
-Replace the accept(2) system call to receive a file descriptor from Kaiso.
+(($# < 3)) && cat << EOF && exit 1
+Usage: $name <target FD> <UNIX socket path> <program> [args...]
+Replaces the accept(2) system call to receive a file descriptor from Kaiso.
 This increases data transfer performance greatly,
 since Kaiso does not have to copy the data anymore.
+
+The target FD must be set to the FD of the main listener socket of the server.
+It can be set to 0 to discover relevant socket operations. Also, lsof can be used.
+The UNIX socket path can be left empty (specify "") if the listener socket
+already is a UNIX socket.
+Otherwise, $name will listen on a UNIX socket of that name, which must be written
+to the service description file together with passfd:<port of the server>
+
+Kaiso will then perform a special port-knocking operation before passing
+the client's file descriptor so that even servers listening only on TCP sockets
+can be used with $name.
 EOF
 
+export KAISO_TARGETFD="$1"
+[ -n "$2" ] && export KAISO_UNIXPATH="$2"
 export LD_PRELOAD="$name.so"
+shift 2
 exec "$@"

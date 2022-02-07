@@ -2,7 +2,7 @@
 name="$(basename "${BASH_SOURCE[0]}")"
 (($# < 3)) && cat << EOF && exit 1
 Usage: $name <kaiso IP:kaiso port> <service path> <program> [args...]
-Inject a Kaiso service path into the connect(2) system call
+Injects a Kaiso service path into the connect(2) system call
 whenever a connection to Kaiso is opened.
 Currently only designed for TCP connections!
 EOF

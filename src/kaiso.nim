@@ -51,7 +51,11 @@ proc handle(client: SocketWithInfo) {.async.} =
               service.socket = newAsyncUnixSocket(buffered = false)
               await service.socket.connectUnix serviceDir / svcAddr
 
-              if svcOption == "passfd":
+              if svcOption.startsWith "passfd":
+                let fields = svcOption.split ':'
+                if fields.len == 2:
+                  let knock = await asyncnet.dial("localhost", fields[1].parseUInt.Port)
+                  knock.close
                 service.socket.passSocket client.socket
                 client.close
                 service.close
