@@ -13,21 +13,32 @@ that are placed somewhere below the `services` directory.
 Expose is the inverse function of kaiso: it exposes a kaiso service on a port,
 thus allowing programs to interact with this service without speaking the kaiso protocol.
 
-kaiso-wrap is a dynamic library for use with LD_PRELOAD.
+kaiso-inject is a wrapper for clients to connect to a service behind kaiso.
 It targets the `connect(2)` function and injects the service path
 when a connection to the kaiso IP and port occurs.
-It is configured via the environment variables `KAISO_IP`, `KAISO_PORT` and `KAISO_SERVICE`
+
+kaiso-passfd is a wrapper for servers to enable passing of client file descriptors.
+This enables direct connection between client and service,
+therefore data transfer speed is not limited by kaiso.
+kaiso-passfd is an advanced tool that will probably not work with every server.
+Its basic prerequisites are:
+- The file descriptor of the listener socket must not be random
+- The server must use a UNIX or TCP socket as the listener
 
 ## Examples
 A client (netcat) connecting to the `foo` service.
 These error messages of kaiso are informative; they occur on disconnection.
 ![](./images/default.png)
 
-Symlinks to sockets also work, shown here with pulseaudio
-![](./images/pulseaudio.png)
-
 Connection via `expose`
 ![](./images/expose.png)
 
-Connection via `kaiso-wrap`
-![](./images/preload.png)
+Connection via `kaiso-inject`
+![](./images/inject.png)
+
+Socat listening on a UNIX socket with passfd active
+
+![](./images/passfd-unix.png)
+
+The simple python webserver with passfd and TCP transmutation active
+![](./images/passfd-tcp.png)
