@@ -24,6 +24,7 @@ proc handle(client: SocketWithInfo) {.async.} =
       for entry in walkDirRec(dir = serviceDir, relative = true, yieldFilter = {pcFile, pcLinkToFile}, followFilter = {pcDir, pcLinkToDir}):
         if not entry.lastPathPart.isHidden:
           await client.socket.sendLine entry
+      await client.socket.sendLine "" # mark end of service list
     # client tries to connect
     else:
       var service = SocketWithInfo()
