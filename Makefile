@@ -4,7 +4,7 @@ WRAPPERS := wrappers
 BINDIR := $(DESTDIR)/usr/bin/
 
 all:
-	nimble -d:release build
+	nimble -d:release -d:lto build
 	strip $(BINS)
 	$(MAKE) -C $(WRAPPERS)
 
